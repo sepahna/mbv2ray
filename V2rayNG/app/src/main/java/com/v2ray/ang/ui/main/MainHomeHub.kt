@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -65,6 +66,7 @@ private val HubAccentSoft = Color(0xFF9B8CFF)
 private val HubCard = Color(0xEB161A26)
 private val HubLine = Color(0x14FFFFFF)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainHomeHub(
     groups: List<GroupMapItem>,
