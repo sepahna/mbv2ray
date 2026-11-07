@@ -119,17 +119,18 @@ fun MainScreen(
     val selectedRow = groupState.rows.firstOrNull { it.guid == selectedGuid }
         ?: groupState.rows.firstOrNull()
     val selectedGroup = groups.firstOrNull { it.id == selectedGroupId }
-    val selectedServerName = selectedRow?.remarks
-        ?: stringResource(R.string.hub_no_server)
-    val selectedServerMeta = buildString {
+    val noServerLabel = stringResource(R.string.hub_no_server)
+    val chooseServerLabel = stringResource(R.string.hub_choose_server)
+    val selectedServerName = selectedRow?.remarks ?: noServerLabel
+    val selectedServerMeta = run {
         val groupName = selectedGroup?.remarks.orEmpty()
-        if (groupName.isNotBlank()) append(groupName)
         val type = selectedRow?.typeDescription.orEmpty()
-        if (type.isNotBlank()) {
-            if (isNotEmpty()) append(" · ")
-            append(type)
+        when {
+            groupName.isNotBlank() && type.isNotBlank() -> "$groupName · $type"
+            groupName.isNotBlank() -> groupName
+            type.isNotBlank() -> type
+            else -> chooseServerLabel
         }
-        if (isEmpty()) append(stringResource(R.string.hub_choose_server))
     }
     val selectedPing = selectedRow?.testDelayMillis ?: 0L
 

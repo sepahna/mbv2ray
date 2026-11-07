@@ -54,10 +54,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.GroupMapItem
-import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorPing
 import com.v2ray.ang.ui.compose.colorPingIdle
 import com.v2ray.ang.ui.compose.colorPingSlow
+import androidx.compose.foundation.BorderStroke
 import kotlinx.coroutines.delay
 
 private val HubAccent = Color(0xFF6D5CFF)
@@ -333,7 +333,7 @@ private fun SelectedServerCard(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
         color = HubCard,
-        border = androidx.compose.foundation.BorderStroke(1.dp, HubLine),
+        border = BorderStroke(1.dp, HubLine),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
