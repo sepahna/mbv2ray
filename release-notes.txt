@@ -1,5 +1,3 @@
-mbv2ray 1.0.0
+mbv2ray 1.0.1
 
-- New NetVPN-style home UI with circular power button, on/off label, and session timer
-- Server picker opens as a bottom sheet; real-delay ping is kept from Barani Core
-- Rebranded as mbv2ray (new package id: ir.mbv2ray.client)
+- Fix top bar icons overlapping the system status bar (clock, signal, battery)
