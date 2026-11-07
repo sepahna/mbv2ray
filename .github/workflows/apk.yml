@@ -1,0 +1,108 @@
+name: Build APK
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          log-accepted-android-sdk-licenses: false
+          packages: "platforms;android-37.0 build-tools;37.0.0 platform-tools"
+
+      - name: Install NDK
+        run: |
+          echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            --install "ndk;30.0.16248370"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/30.0.16248370" >> "$GITHUB_ENV"
+
+      - name: Build hev tunnel libraries
+        run: NDK_DEBUG=0 bash compile-hevtun.sh
+
+      - name: Copy hev libraries
+        run: cp -a libs V2rayNG/app/
+
+      - name: Download libv2ray
+        run: |
+          git -C AndroidLibXrayLite fetch --tags --force
+          TAG="$(git -C AndroidLibXrayLite describe --tags --abbrev=0 || echo v26.10.31)"
+          echo "libv2ray tag: $TAG"
+          mkdir -p V2rayNG/app/libs
+          curl -fL --retry 3 -o V2rayNG/app/libs/libv2ray.aar \
+            "https://github.com/2dust/AndroidLibXrayLite/releases/download/${TAG}/libv2ray.aar"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Build APK
+        working-directory: V2rayNG
+        env:
+          STORE_B64: ${{ secrets.APP_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.APP_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.APP_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.APP_KEY_PASSWORD }}
+        run: |
+          echo "sdk.dir=${ANDROID_HOME}" > local.properties
+          chmod 755 gradlew
+          if [ -n "$STORE_B64" ] && [ -n "$STORE_PASS" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASS" ]; then
+            echo "$STORE_B64" | base64 -d > "$RUNNER_TEMP/mbv2ray-release.p12"
+            ./gradlew assemblePlaystoreRelease --stacktrace \
+              -Pandroid.injected.signing.store.file="$RUNNER_TEMP/mbv2ray-release.p12" \
+              -Pandroid.injected.signing.store.password="$STORE_PASS" \
+              -Pandroid.injected.signing.store.type=pkcs12 \
+              -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+              -Pandroid.injected.signing.key.password="$KEY_PASS"
+            echo "APK_GLOB=V2rayNG/app/build/outputs/apk/playstore/release/*universal*.apk" >> "$GITHUB_ENV"
+          else
+            echo "Release signing secrets missing; building Playstore debug APK."
+            ./gradlew assemblePlaystoreDebug --stacktrace
+            echo "APK_GLOB=V2rayNG/app/build/outputs/apk/playstore/debug/*universal*.apk" >> "$GITHUB_ENV"
+          fi
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mbv2ray-universal
+          path: ${{ env.APK_GLOB }}
+          if-no-files-found: error
+
+      - name: Publish APK release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' V2rayNG/app/build.gradle.kts | head -1)"
+          NOTES_FILE="release-notes.txt"
+          if [ ! -f "$NOTES_FILE" ]; then
+            printf 'mbv2ray %s\n' "$VER" > "$NOTES_FILE"
+          fi
+          APK="$(ls $APK_GLOB)"
+          if gh release view "v$VER" >/dev/null 2>&1; then
+            gh release upload "v$VER" "$APK" --clobber
+            gh release edit "v$VER" --title "mbv2ray $VER" --notes-file "$NOTES_FILE"
+          else
+            gh release create "v$VER" "$APK" \
+              --title "mbv2ray $VER" \
+              --notes-file "$NOTES_FILE"
+          fi
+          gh release delete apk --yes --cleanup-tag || true
