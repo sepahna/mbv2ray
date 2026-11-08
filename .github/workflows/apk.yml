@@ -78,6 +78,16 @@ jobs:
           distribution: temurin
           java-version: "21"
 
+      - name: Prefer Gradle mirror when services.gradle.org is down
+        run: |
+          # services.gradle.org currently redirects to github.com/gradle releases and can 504.
+          sed -i 's#https\\://services.gradle.org/distributions/gradle-9.8.2-bin.zip#https\\://mirrors.cloud.tencent.com/gradle/gradle-9.8.2-bin.zip#' \
+            V2rayNG/gradle/wrapper/gradle-wrapper.properties
+          grep distributionUrl V2rayNG/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Build APK
         working-directory: V2rayNG
         env:
