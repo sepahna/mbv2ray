@@ -27,6 +27,8 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -49,14 +51,17 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.LocateTarget
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.dto.entities.SubscriptionUsageInfo
+import com.v2ray.ang.handler.FreeSubscription
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.ReorderableGridItem
 import com.v2ray.ang.ui.compose.ReorderableListItem
@@ -131,22 +136,29 @@ fun GroupPagerPage(
     }
 
     Box(Modifier.fillMaxSize()) {
-        ServerListPage(
-            rows = groupState.rows,
-            selectedGuid = selectedGuid,
-            locateTarget = locateTarget?.takeIf { it.groupId == groupId },
-            canReorder = canReorder,
-            doubleColumnDisplay = doubleColumnDisplay,
-            groupId = groupId,
-            lazyListStates = lazyListStates,
-            lazyGridStates = lazyGridStates,
-            actions = actions,
-            onLocateHandled = { mainViewModel.onAction(MainAction.LocateHandled) },
-            onMoveServer = { fromIndex, toIndex ->
-                mainViewModel.moveServer(groupId, fromIndex, toIndex)
-            },
-            contentPadding = listPadding
-        )
+        if (FreeSubscription.isFree(groupId) && groupState.rows.isEmpty()) {
+            FreeGroupEmptyState(
+                onOpenBuy = { onOpenLink("${AppConfig.SITE_URL}/plans") },
+                contentPadding = listPadding
+            )
+        } else {
+            ServerListPage(
+                rows = groupState.rows,
+                selectedGuid = selectedGuid,
+                locateTarget = locateTarget?.takeIf { it.groupId == groupId },
+                canReorder = canReorder,
+                doubleColumnDisplay = doubleColumnDisplay,
+                groupId = groupId,
+                lazyListStates = lazyListStates,
+                lazyGridStates = lazyGridStates,
+                actions = actions,
+                onLocateHandled = { mainViewModel.onAction(MainAction.LocateHandled) },
+                onMoveServer = { fromIndex, toIndex ->
+                    mainViewModel.moveServer(groupId, fromIndex, toIndex)
+                },
+                contentPadding = listPadding
+            )
+        }
         if (usageInfo != null) {
             SubscriptionInfoCard(
                 info = usageInfo,
@@ -157,6 +169,43 @@ fun GroupPagerPage(
                     .align(Alignment.TopCenter)
                     .onSizeChanged { infoHeightPx = it.height }
             )
+        }
+    }
+}
+
+@Composable
+private fun FreeGroupEmptyState(
+    onOpenBuy: () -> Unit,
+    contentPadding: PaddingValues
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding)
+            .padding(horizontal = 32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = stringResource(R.string.free_group_empty_title),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = stringResource(R.string.free_group_empty_message),
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(24.dp))
+        Button(
+            onClick = onOpenBuy,
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Text(stringResource(R.string.title_site_buy))
         }
     }
 }

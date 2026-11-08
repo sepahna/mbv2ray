@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,11 +24,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +56,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,13 +65,13 @@ import com.v2ray.ang.dto.GroupMapItem
 import com.v2ray.ang.ui.compose.colorPing
 import com.v2ray.ang.ui.compose.colorPingIdle
 import com.v2ray.ang.ui.compose.colorPingSlow
-import androidx.compose.foundation.BorderStroke
 import kotlinx.coroutines.delay
 
 private val HubAccent = Color(0xFF6D5CFF)
 private val HubAccentSoft = Color(0xFF9B8CFF)
 private val HubCard = Color(0xEB161A26)
 private val HubLine = Color(0x14FFFFFF)
+private val HubGood = Color(0xFF3DDC97)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,6 +79,7 @@ fun MainHomeHub(
     groups: List<GroupMapItem>,
     selectedGroupIndex: Int,
     isRunning: Boolean,
+    showGetStarted: Boolean,
     statusText: String,
     selectedServerName: String,
     selectedServerMeta: String,
@@ -80,6 +88,10 @@ fun MainHomeHub(
     onToggleService: () -> Unit,
     onOpenServers: () -> Unit,
     onTestCurrent: () -> Unit,
+    onQuickImport: () -> Unit,
+    onImportClipboard: () -> Unit,
+    onScanQr: () -> Unit,
+    onAddSubscription: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var elapsedSec by remember { mutableIntStateOf(0) }
@@ -110,7 +122,7 @@ fun MainHomeHub(
                 itemsIndexed(groups, key = { _, g -> g.id }) { index, group ->
                     val selected = index == selectedGroupIndex
                     Text(
-                        text = group.remarks.ifBlank { "Group" },
+                        text = group.remarks.ifBlank { stringResource(R.string.hub_group_fallback) },
                         modifier = Modifier
                             .clip(RoundedCornerShape(999.dp))
                             .background(if (selected) HubAccent.copy(alpha = 0.22f) else Color.Transparent)
@@ -131,60 +143,232 @@ fun MainHomeHub(
             }
         }
 
+        if (showGetStarted) {
+            GetStartedPanel(
+                onQuickImport = onQuickImport,
+                onImportClipboard = onImportClipboard,
+                onScanQr = onScanQr,
+                onAddSubscription = onAddSubscription,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            )
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                StatCard(
+                    label = stringResource(R.string.hub_download),
+                    value = if (isRunning) stringResource(R.string.hub_speed_live) else "—",
+                    accent = colorPing,
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    label = stringResource(R.string.hub_upload),
+                    value = if (isRunning) stringResource(R.string.hub_speed_live) else "—",
+                    accent = HubAccentSoft,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                PowerOrbit(
+                    isRunning = isRunning,
+                    onToggle = onToggleService,
+                )
+            }
+
+            Text(
+                text = formatElapsed(elapsedSec),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 2.sp,
+                color = Color.White,
+            )
+            Text(
+                text = statusText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (isRunning) colorPing else Color(0xFF8B93A7),
+                modifier = Modifier
+                    .padding(top = 4.dp, bottom = 16.dp)
+                    .clickable(onClick = onTestCurrent)
+                    .semantics { contentDescription = statusText }
+            )
+
+            SelectedServerCard(
+                name = selectedServerName,
+                meta = selectedServerMeta,
+                pingMillis = selectedPingMillis,
+                onClick = onOpenServers,
+            )
+            Spacer(Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
+private fun GetStartedPanel(
+    onQuickImport: () -> Unit,
+    onImportClipboard: () -> Unit,
+    onScanQr: () -> Unit,
+    onAddSubscription: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scroll = rememberScrollState()
+    Column(
+        modifier = modifier
+            .verticalScroll(scroll)
+            .padding(top = 8.dp, bottom = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(88.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.radialGradient(
+                        listOf(HubAccent.copy(alpha = 0.45f), Color(0xFF171B26))
+                    )
+                )
+                .border(1.dp, HubAccent.copy(alpha = 0.35f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_lock_24dp),
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(36.dp)
+            )
+        }
+        Spacer(Modifier.height(18.dp))
+        Text(
+            text = stringResource(R.string.hub_get_started_title),
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 24.sp,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = stringResource(R.string.hub_get_started_subtitle),
+            color = Color(0xFF8B93A7),
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp, start = 8.dp, end = 8.dp),
+            lineHeight = 20.sp,
+        )
+        Spacer(Modifier.height(22.dp))
+
+        Surface(
+            shape = RoundedCornerShape(22.dp),
+            color = HubCard,
+            border = BorderStroke(1.dp, HubLine),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    text = stringResource(R.string.hub_get_started_steps),
+                    color = HubGood,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp,
+                )
+                Spacer(Modifier.height(10.dp))
+                GetStartedStep(number = "1", text = stringResource(R.string.hub_get_started_step_paste))
+                GetStartedStep(number = "2", text = stringResource(R.string.hub_get_started_step_pick))
+                GetStartedStep(number = "3", text = stringResource(R.string.hub_get_started_step_connect))
+            }
+        }
+
+        Spacer(Modifier.height(18.dp))
+        Button(
+            onClick = onQuickImport,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = HubAccent),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_add_24dp),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.hub_get_started_primary),
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        OutlinedButton(
+            onClick = onImportClipboard,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, HubAccent.copy(alpha = 0.45f)),
+        ) {
+            Text(stringResource(R.string.hub_get_started_clipboard))
+        }
+        Spacer(Modifier.height(10.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            StatCard(
-                label = stringResource(R.string.hub_download),
-                value = if (isRunning) stringResource(R.string.hub_speed_live) else "—",
-                accent = colorPing,
-                modifier = Modifier.weight(1f)
-            )
-            StatCard(
-                label = stringResource(R.string.hub_upload),
-                value = if (isRunning) stringResource(R.string.hub_speed_live) else "—",
-                accent = HubAccentSoft,
-                modifier = Modifier.weight(1f)
-            )
+            OutlinedButton(
+                onClick = onScanQr,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, HubLine),
+            ) {
+                Text(stringResource(R.string.hub_get_started_qr))
+            }
+            OutlinedButton(
+                onClick = onAddSubscription,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, HubLine),
+            ) {
+                Text(stringResource(R.string.hub_get_started_subscription))
+            }
         }
+    }
+}
 
+@Composable
+private fun GetStartedStep(number: String, text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
         Box(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(HubAccent.copy(alpha = 0.2f)),
             contentAlignment = Alignment.Center
         ) {
-            PowerOrbit(
-                isRunning = isRunning,
-                onToggle = onToggleService,
-            )
+            Text(text = number, color = HubAccentSoft, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
-
+        Spacer(Modifier.width(10.dp))
         Text(
-            text = formatElapsed(elapsedSec),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = 2.sp,
-            color = Color.White,
+            text = text,
+            color = Color(0xFFD7DCEA),
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            modifier = Modifier.weight(1f),
         )
-        Text(
-            text = statusText,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (isRunning) colorPing else Color(0xFF8B93A7),
-            modifier = Modifier
-                .padding(top = 4.dp, bottom = 16.dp)
-                .clickable(onClick = onTestCurrent)
-                .semantics { contentDescription = statusText }
-        )
-
-        SelectedServerCard(
-            name = selectedServerName,
-            meta = selectedServerMeta,
-            pingMillis = selectedPingMillis,
-            onClick = onOpenServers,
-        )
-        Spacer(Modifier.height(12.dp))
     }
 }
 

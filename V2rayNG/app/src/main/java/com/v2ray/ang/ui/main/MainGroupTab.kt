@@ -255,6 +255,7 @@ private fun GroupTabItem(
 @Composable
 internal fun GroupTabActionDialog(
     name: String,
+    allowDelete: Boolean,
     onMove: () -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit
@@ -276,12 +277,14 @@ internal fun GroupTabActionDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                TextButton(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        stringResource(R.string.group_tab_delete),
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                if (allowDelete) {
+                    TextButton(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            stringResource(R.string.group_tab_delete),
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
                 TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.action_cancel), modifier = Modifier.fillMaxWidth())

@@ -73,10 +73,12 @@ jobs:
               -Pandroid.injected.signing.store.type=pkcs12 \
               -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
               -Pandroid.injected.signing.key.password="$KEY_PASS"
+            echo "SIGNED_RELEASE=1" >> "$GITHUB_ENV"
             echo "APK_GLOB=V2rayNG/app/build/outputs/apk/playstore/release/*universal*.apk" >> "$GITHUB_ENV"
           else
-            echo "Release signing secrets missing; building Playstore debug APK."
+            echo "Release signing secrets missing; building Playstore debug APK for artifacts only."
             ./gradlew assemblePlaystoreDebug --stacktrace
+            echo "SIGNED_RELEASE=0" >> "$GITHUB_ENV"
             echo "APK_GLOB=V2rayNG/app/build/outputs/apk/playstore/debug/*universal*.apk" >> "$GITHUB_ENV"
           fi
 
@@ -95,6 +97,11 @@ jobs:
           NOTES_FILE="release-notes.txt"
           if [ ! -f "$NOTES_FILE" ]; then
             printf 'mbv2ray %s\n' "$VER" > "$NOTES_FILE"
+          fi
+          if [ "${SIGNED_RELEASE:-0}" != "1" ]; then
+            echo "WARNING: publishing Playstore debug APK because release signing secrets are missing."
+            echo "Configure APP_KEYSTORE_* secrets for production-signed self-updates."
+            printf '\n\nNote: this build is unsigned/debug-signed. Install over a differently signed build may fail.\n' >> "$NOTES_FILE"
           fi
           APK="$(ls $APK_GLOB)"
           if gh release view "v$VER" >/dev/null 2>&1; then

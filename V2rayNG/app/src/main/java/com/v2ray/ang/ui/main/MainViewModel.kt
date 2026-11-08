@@ -18,6 +18,7 @@ import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.isComplexType
 import com.v2ray.ang.extension.matchesPattern
 import com.v2ray.ang.extension.moveItem
+import com.v2ray.ang.handler.FreeSubscription
 import com.v2ray.ang.handler.SubscriptionInfoParser
 import com.v2ray.ang.ui.base.BaseViewModel
 import com.v2ray.ang.util.LogUtil
@@ -109,7 +110,6 @@ class MainViewModel(
 
     private val testRequests = MainTestRequests()
     private var bulkTestJob: Job? = null
-    private val autoRealPingStamp = ConcurrentHashMap<String, Long>()
 
     private val initialPageReady = CompletableDeferred<Unit>()
 
@@ -344,11 +344,24 @@ class MainViewModel(
                 delay(32)
                 dataSource.initAssets()
                 dataSource.syncSubscriptions()
+                launch(ioDispatcher) { refreshBuiltinFreeGroup() }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
                 LogUtil.e(AppConfig.TAG, "Main background initialization failed", error)
             }
+        }
+    }
+
+    /** Reads the site feed into the built-in free group without a progress toast. */
+    private suspend fun refreshBuiltinFreeGroup() {
+        val item = dataSource.getSubscriptionItem(AppConfig.FREE_SUBSCRIPTION_ID) ?: return
+        val result = dataSource.updateConfigViaSub(
+            SubscriptionCache(AppConfig.FREE_SUBSCRIPTION_ID, item)
+        )
+        if (result.successCount > 0) {
+            setupGroupTab(forceRefresh = true)
+            refreshSelectedGuid()
         }
     }
 
@@ -505,7 +518,6 @@ class MainViewModel(
 
                 val selectedServers = loadGroup(selectedGroup, forceRefresh)
                 updateGroupUi(selectedGroup, selectedServers)
-                scheduleAutoRealPing(selectedGroup, force = forceRefresh)
 
                 if (!initialPageReady.isCompleted) {
                     initialPageReady.complete(Unit)
@@ -596,7 +608,7 @@ class MainViewModel(
                         else ->
                             toast(dataSource.getString(R.string.title_update_subscription_result, result.configCount, result.successCount, result.failureCount, result.skipCount))
                     }
-                    if (result.configCount > 0) {
+                    if (result.successCount > 0) {
                         setupGroupTab(forceRefresh = true)
                         refreshSelectedGuid()
                     }
@@ -763,7 +775,6 @@ class MainViewModel(
         selectedGroupLoadJob = viewModelScope.launch(ioDispatcher) {
             try {
                 updateGroupUi(id, loadGroup(id))
-                scheduleAutoRealPing(id)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
@@ -829,7 +840,7 @@ class MainViewModel(
     }
 
     fun deleteSubscription(groupId: String) {
-        if (groupId.isEmpty()) return
+        if (groupId.isEmpty() || FreeSubscription.isFree(groupId)) return
         viewModelScope.launch(ioDispatcher) {
             dataSource.removeSubscription(groupId)
             cacheMutex.withLock { groupDataCache.clear() }
@@ -868,21 +879,6 @@ class MainViewModel(
     }
 
     // ---------- Testing ----------
-    /**
-     * Refresh the selected group with the same real-delay probe as "Test real delays".
-     * A short cooldown avoids restarting a full outbound measurement on every tab switch.
-     */
-    private fun scheduleAutoRealPing(groupId: String, force: Boolean = false) {
-        if (groupId.isEmpty() || testRequests.isTesting) return
-        if (uiState.value.selectedGroupId != groupId) return
-        val elapsed = System.currentTimeMillis() - (autoRealPingStamp[groupId] ?: 0L)
-        if (!force && elapsed < AUTO_REAL_PING_COOLDOWN_MS && autoRealPingStamp.containsKey(groupId)) {
-            return
-        }
-        autoRealPingStamp[groupId] = System.currentTimeMillis()
-        testAllRealPing(onlyTcp = false)
-    }
-
     fun cancelAllPing() {
         bulkTestJob?.cancel()
         bulkTestJob = null
@@ -1081,6 +1077,5 @@ class MainViewModel(
 
     private companion object {
         const val TEST_RESULT_FLUSH_INTERVAL_MS = 500L
-        const val AUTO_REAL_PING_COOLDOWN_MS = 30_000L
     }
 }

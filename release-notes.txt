@@ -1,3 +1,7 @@
-mbv2ray 1.0.1
+mbv2ray 1.0.2
 
-- Fix top bar icons overlapping the system status bar (clock, signal, battery)
+- Built-in Free group synced from mbarani.ir
+- Channel / buy shortcuts and real-delay gauge on the home bar
+- Guided first-run import for subscription links and configs
+- Safer in-app APK update checks (complete download + package validation)
+- Disable automatic ping on open and group switch

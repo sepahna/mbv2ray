@@ -40,6 +40,7 @@ object SettingsManager {
     fun initApp(context: Context) {
         ensureDefaultSettings()
         //ensureDefaultSubscription()
+        ensureFreeSubscription()
         initRoutingRulesets(context)
         migrateServerListToSubscriptions()
         migrateHysteria2PinSHA256()
@@ -236,6 +237,7 @@ object SettingsManager {
      * it creates a new default subscription to ensure that ungroup
      **/
     fun removeSubscriptionWithDefault(subid: String) {
+        if (FreeSubscription.isFree(subid)) return
         SubscriptionUpdater.cancelOne(subId = subid)
         // Remove the subscription
         removeSubscription(subid)
@@ -557,6 +559,35 @@ object SettingsManager {
 
         // Mark migration as complete
         MmkvManager.encodeSettings(migrationKey, true)
+    }
+
+    /**
+     * Creates the built-in free group, or puts it back if its saved fields were changed.
+     * A newly created group is placed first. An existing one keeps the user's order.
+     */
+    fun ensureFreeSubscription() {
+        val id = AppConfig.FREE_SUBSCRIPTION_ID
+        val existing = decodeSubscription(id)
+        if (existing == null) {
+            encodeSubscription(id, SubscriptionItem())
+            moveSubscriptionToFront(id)
+            return
+        }
+        val before = existing.copy()
+        FreeSubscription.pin(existing)
+        val listed = decodeSubsList().contains(id)
+        if (existing != before || !listed) {
+            encodeSubscription(id, existing)
+        }
+        if (!listed) moveSubscriptionToFront(id)
+    }
+
+    private fun moveSubscriptionToFront(id: String) {
+        val ids = decodeSubsList()
+        val from = ids.indexOf(id)
+        if (from > 0 && ids.moveItem(from, 0)) {
+            MmkvManager.encodeSubsList(ids)
+        }
     }
 
     /**

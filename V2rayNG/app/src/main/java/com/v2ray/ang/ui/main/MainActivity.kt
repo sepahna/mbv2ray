@@ -211,7 +211,13 @@ class MainActivity : HelperBaseComponentActivity() {
             }
             downloaded.onSuccess { apk ->
                 updateUi = updateUi?.copy(finished = true, received = apk.length())
-                promptInstall(apk)
+                runCatching { promptInstall(apk) }.onFailure { installError ->
+                    LogUtil.e(AppConfig.TAG, "Failed to launch APK installer", installError)
+                    updateUi = updateUi?.copy(
+                        finished = false,
+                        error = installError.message ?: getString(R.string.toast_failure)
+                    )
+                }
             }.onFailure { error ->
                 if (error is CancellationException) return@onFailure
                 updateUi = updateUi?.copy(error = error.message)

@@ -7,6 +7,25 @@
     <string name="hub_choose_server">انتخاب سرور</string>
     <string name="hub_no_server">سروری انتخاب نشده</string>
     <string name="hub_brand_subtitle" translatable="false">secure core</string>
+    <string name="hub_group_fallback">گروه</string>
+    <string name="hub_get_started_title">اولین اتصال را اضافه کنید</string>
+    <string name="hub_get_started_subtitle">لینک سابسکرایبشن یا کانفیگ را بچسبانید، سرور را انتخاب کنید و وصل شوید.</string>
+    <string name="hub_get_started_steps">۳ مرحله ساده</string>
+    <string name="hub_get_started_step_paste">لینک یا کانفیگی که از ارائه‌دهنده گرفته‌اید را وارد کنید</string>
+    <string name="hub_get_started_step_pick">یک سرور از فهرست انتخاب کنید</string>
+    <string name="hub_get_started_step_connect">دکمه روشن را بزنید تا وصل شوید</string>
+    <string name="hub_get_started_primary">چسباندن لینک یا کانفیگ</string>
+    <string name="hub_get_started_clipboard">وارد کردن از کلیپ‌بورد</string>
+    <string name="hub_get_started_qr">اسکن QR</string>
+    <string name="hub_get_started_subscription">سابسکرایبشن</string>
+    <string name="hub_quick_import_title">افزودن سریع</string>
+    <string name="hub_quick_import_hint">آدرس سابسکرایبشن (https://…) یا لینک کانفیگ را اینجا بچسبانید. هر دو پشتیبانی می‌شوند.</string>
+    <string name="hub_quick_import_placeholder">https://… یا vless:// / vmess:// / ss:// …</string>
+    <string name="hub_quick_import_paste">چسباندن از کلیپ‌بورد</string>
+    <string name="hub_quick_import_continue">وارد کردن</string>
+    <string name="free_group_summary">از سایت به‌روز می‌شود. کانفیگی که آنجا حذف شود، در به‌روزرسانی بعدی اینجا هم حذف می‌شود.</string>
+    <string name="free_group_empty_title">به‌زودی</string>
+    <string name="free_group_empty_message">برای خرید پلن به وب‌سایت سر بزنید.</string>
     <string name="app_widget_name">تعویض</string>
     <string name="app_tile_name">تعویض</string>
     <string name="app_tile_first_use">برای اولین استفاده از این قابلیت، لطفاً ابتدا از داخل برنامه یک سرور اضافه کنید</string>

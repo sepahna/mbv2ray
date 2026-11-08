@@ -64,7 +64,11 @@ object UpdateCheckerManager {
         val comparableVersion = versionParts(latestVersion) ?: return@withContext CheckUpdateResult(hasUpdate = false)
         val currentVersion = versionParts(BuildConfig.VERSION_NAME) ?: return@withContext CheckUpdateResult(hasUpdate = false)
         return@withContext if (compareVersions(comparableVersion, currentVersion) > 0) {
-            val downloadUrl = getDownloadUrl(latestRelease, Build.SUPPORTED_ABIS[0])
+            val downloadUrl = selectApkDownloadUrl(
+                assets = latestRelease.assets.map { it.name to it.browserDownloadUrl },
+                abi = Build.SUPPORTED_ABIS[0],
+                applicationId = BuildConfig.APPLICATION_ID,
+            )
             CheckUpdateResult(
                 hasUpdate = true,
                 latestVersion = latestVersion,
@@ -94,18 +98,30 @@ object UpdateCheckerManager {
         return 0
     }
 
-    private fun getDownloadUrl(release: GitHubRelease, abi: String): String {
-        val apks = release.assets.filter { it.name.endsWith(".apk", ignoreCase = true) }
-        val fDroid = "fdroid"
-        val assetsByAbi = apks.filter { it.name.contains(abi, ignoreCase = true) }
-        val asset = if (BuildConfig.APPLICATION_ID.contains(fDroid, ignoreCase = true)) {
-            assetsByAbi.firstOrNull { it.name.contains(fDroid, ignoreCase = true) }
-        } else {
-            assetsByAbi.firstOrNull { !it.name.contains(fDroid, ignoreCase = true) }
+    /**
+     * Prefers a matching ABI APK for the current distribution, then universal.
+     * Avoids picking an ABI asset that only matches because "universal" contains no ABI token.
+     */
+    fun selectApkDownloadUrl(
+        assets: List<Pair<String, String>>,
+        abi: String,
+        applicationId: String,
+    ): String {
+        val apks = assets.filter { it.first.endsWith(".apk", ignoreCase = true) }
+        if (apks.isEmpty()) {
+            throw IllegalStateException("No compatible APK found")
         }
-
-        return asset?.browserDownloadUrl
-            ?: apks.firstOrNull { it.name.contains("universal", ignoreCase = true) }?.browserDownloadUrl
-            ?: throw IllegalStateException("No compatible APK found")
+        val fDroid = "fdroid"
+        val wantsFdroid = applicationId.contains(fDroid, ignoreCase = true)
+        fun matchesDistribution(name: String): Boolean {
+            val isFdroidAsset = name.contains(fDroid, ignoreCase = true)
+            return if (wantsFdroid) isFdroidAsset else !isFdroidAsset
+        }
+        val distributionApks = apks.filter { matchesDistribution(it.first) }.ifEmpty { apks }
+        val abiMatch = distributionApks.firstOrNull { it.first.contains(abi, ignoreCase = true) }
+        val universal = distributionApks.firstOrNull {
+            it.first.contains("universal", ignoreCase = true)
+        }
+        return (abiMatch ?: universal ?: distributionApks.first()).second
     }
 }

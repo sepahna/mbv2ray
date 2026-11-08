@@ -10,6 +10,7 @@ import com.v2ray.ang.dto.entities.SubscriptionCache
 import com.v2ray.ang.dto.entities.SubscriptionItem
 import com.v2ray.ang.extension.moveItem
 import com.v2ray.ang.handler.AngConfigManager
+import com.v2ray.ang.handler.FreeSubscription
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.handler.SettingsManager
@@ -45,6 +46,7 @@ class SubscriptionsViewModel(application: Application) : BaseViewModel(applicati
     }
 
     fun remove(subId: String): Boolean {
+        if (FreeSubscription.isFree(subId)) return false
         val changed = subscriptions.removeAll { it.guid == subId }
         if (changed) {
             SettingsManager.removeSubscriptionWithDefault(subId)
@@ -121,7 +123,7 @@ class SubscriptionsViewModel(application: Application) : BaseViewModel(applicati
                     else ->
                         toast(getString(R.string.title_update_subscription_result, result.configCount, result.successCount, result.failureCount, result.skipCount))
                 }
-                if (result.configCount > 0) {
+                if (result.successCount > 0) {
                     SettingsChangeManager.makeSetupGroupTab()
                 }
                 reload()

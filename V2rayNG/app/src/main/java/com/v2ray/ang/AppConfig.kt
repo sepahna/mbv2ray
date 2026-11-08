@@ -128,6 +128,10 @@ object AppConfig {
     const val GITHUB_DOWNLOAD_URL = "$GITHUB_URL/%s/releases/latest/download"
     const val ANDROID_PACKAGE_NAME_LIST_URL = "$GITHUB_RAW_URL/2dust/androidpackagenamelist/master/proxy.txt"
     const val SITE_URL = "https://mbarani.ir"
+
+    /** Built-in group filled from the public site feed. Users cannot delete or retarget it. */
+    const val FREE_SUBSCRIPTION_ID = "__free_subscription__"
+    const val FREE_SUBSCRIPTION_URL = "$SITE_URL/sub/free"
     const val APP_URL = "$GITHUB_URL/sepahna/mbv2ray"
     const val APP_API_URL = "https://api.github.com/repos/sepahna/mbv2ray/releases"
     const val APP_ISSUES_URL = "$APP_URL/issues"

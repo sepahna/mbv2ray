@@ -55,9 +55,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.GroupMapItem
 import com.v2ray.ang.dto.entities.ProfileItem
+import com.v2ray.ang.handler.FreeSubscription
 import com.v2ray.ang.ui.compose.ConfirmDialog
 import com.v2ray.ang.ui.compose.QRCodeDialog
 import com.v2ray.ang.ui.compose.verticalScrollbar
@@ -92,6 +94,7 @@ fun MainScreen(
         mutableStateOf<ServerDeleteTarget?>(null)
     }
     var showServerSheet by rememberSaveable { mutableStateOf(false) }
+    var showQuickImport by rememberSaveable { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var shareTarget by remember { mutableStateOf<Triple<String, ProfileItem, Boolean>?>(null) }
@@ -134,6 +137,12 @@ fun MainScreen(
         }
     }
     val selectedPing = selectedRow?.testDelayMillis ?: 0L
+    // Guided empty hub when there are no groups, or only the built-in free group is empty.
+    val showGetStarted = groups.isEmpty() || (
+        groups.size == 1 &&
+            FreeSubscription.isFree(groups.first().id) &&
+            groupState.rows.isEmpty()
+        )
 
     LaunchedEffect(groups) {
         val validGroupIds = groups.map { it.id }.toSet()
@@ -195,6 +204,7 @@ fun MainScreen(
     tabMenu?.let { group ->
         GroupTabActionDialog(
             name = group.remarks,
+            allowDelete = group.id != AppConfig.FREE_SUBSCRIPTION_ID,
             onMove = {
                 tabMenu = null
                 moveTarget = group
@@ -294,6 +304,7 @@ fun MainScreen(
                         (groups.size - 1).coerceAtLeast(0)
                     ),
                     isRunning = isRunning,
+                    showGetStarted = showGetStarted,
                     statusText = displayText,
                     selectedServerName = selectedServerName,
                     selectedServerMeta = selectedServerMeta,
@@ -309,9 +320,23 @@ fun MainScreen(
                     onToggleService = { onAction(MainAction.ToggleService) },
                     onOpenServers = { showServerSheet = true },
                     onTestCurrent = { onAction(MainAction.TestCurrentServer) },
+                    onQuickImport = { showQuickImport = true },
+                    onImportClipboard = { onAction(MainAction.ImportClipboard) },
+                    onScanQr = { onAction(MainAction.ImportQRcode) },
+                    onAddSubscription = { onAction(MainAction.AddSubscription) },
                 )
             }
         }
+    }
+
+    if (showQuickImport) {
+        MainQuickImportSheet(
+            onDismiss = { showQuickImport = false },
+            onImport = { text ->
+                showQuickImport = false
+                onAction(MainAction.ImportBatchConfig(text))
+            },
+        )
     }
 
     if (showServerSheet) {
@@ -509,10 +534,37 @@ private fun HubTopBar(
                 color = Color(0xFF9B8CFF),
             )
         }
+        val channelTitle = stringResource(R.string.title_site_channel)
+        val buyTitle = stringResource(R.string.title_site_buy)
+        IconButton(onClick = {
+            onAction(MainAction.OpenSite("${AppConfig.SITE_URL}/channel/", channelTitle))
+        }) {
+            Icon(
+                painterResource(R.drawable.ic_channel_24dp),
+                contentDescription = channelTitle,
+                tint = Color.White,
+            )
+        }
+        IconButton(onClick = {
+            onAction(MainAction.OpenSite("${AppConfig.SITE_URL}/plans", buyTitle))
+        }) {
+            Icon(
+                painterResource(R.drawable.ic_cart_24dp),
+                contentDescription = buyTitle,
+                tint = Color.White,
+            )
+        }
         IconButton(onClick = onSearchClick) {
             Icon(
                 painterResource(R.drawable.ic_search_24dp),
                 contentDescription = stringResource(R.string.acc_search),
+                tint = Color.White,
+            )
+        }
+        IconButton(onClick = { onAction(MainAction.TestRealAllServers) }) {
+            Icon(
+                painterResource(R.drawable.ic_gauge_24dp),
+                contentDescription = stringResource(R.string.title_real_ping_all_server),
                 tint = Color.White,
             )
         }

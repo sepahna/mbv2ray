@@ -666,6 +666,7 @@ object MmkvManager {
      * @param subid The subscription ID.
      */
     fun removeSubscription(subid: String) {
+        if (FreeSubscription.isFree(subid)) return
         subStorage.remove(subid)
         val subsList = decodeSubsList()
         subsList.remove(subid)
@@ -682,6 +683,7 @@ object MmkvManager {
      */
     fun encodeSubscription(guid: String, subItem: SubscriptionItem) {
         val key = guid.ifBlank { Utils.getUuid() }
+        if (FreeSubscription.isFree(key)) FreeSubscription.pin(subItem)
         subStorage.encode(key, JsonUtil.toJson(subItem))
 
         val subsList = decodeSubsList()

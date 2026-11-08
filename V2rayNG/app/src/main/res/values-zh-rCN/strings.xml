@@ -7,6 +7,25 @@
     <string name="hub_choose_server">Choose server</string>
     <string name="hub_no_server">No server selected</string>
     <string name="hub_brand_subtitle" translatable="false">secure core</string>
+    <string name="hub_group_fallback">Group</string>
+    <string name="hub_get_started_title">Add your first connection</string>
+    <string name="hub_get_started_subtitle">Paste a subscription link or config. Then pick a server and connect.</string>
+    <string name="hub_get_started_steps">3 easy steps</string>
+    <string name="hub_get_started_step_paste">Paste the link or config you received from your provider</string>
+    <string name="hub_get_started_step_pick">Choose a server from the list</string>
+    <string name="hub_get_started_step_connect">Tap the power button to connect</string>
+    <string name="hub_get_started_primary">Paste link or config</string>
+    <string name="hub_get_started_clipboard">Import from clipboard</string>
+    <string name="hub_get_started_qr">Scan QR</string>
+    <string name="hub_get_started_subscription">Subscription</string>
+    <string name="hub_quick_import_title">Quick add</string>
+    <string name="hub_quick_import_hint">Paste a subscription URL (https://…) or a single config share link. Both work here.</string>
+    <string name="hub_quick_import_placeholder">https://… or vless:// / vmess:// / ss:// …</string>
+    <string name="hub_quick_import_paste">Paste from clipboard</string>
+    <string name="hub_quick_import_continue">Import</string>
+    <string name="free_group_summary">Updated from the site. A config removed there is removed here on the next update.</string>
+    <string name="free_group_empty_title">Coming soon</string>
+    <string name="free_group_empty_message">Visit the website to purchase a plan.</string>
     <string name="app_widget_name">开关</string>
     <string name="app_tile_name">开关</string>
     <string name="app_tile_first_use">初次使用此功能请先用 APP 添加配置</string>

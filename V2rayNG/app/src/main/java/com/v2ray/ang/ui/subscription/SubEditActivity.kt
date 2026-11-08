@@ -31,6 +31,7 @@ import com.v2ray.ang.dto.entities.SubscriptionItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.toLongEx
 import com.v2ray.ang.extension.toastSuccess
+import com.v2ray.ang.handler.FreeSubscription
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.handler.SettingsManager
@@ -58,6 +59,10 @@ class SubEditActivity : BaseComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (FreeSubscription.isFree(editSubId)) {
+            finish()
+            return
+        }
 
         suggestions = SettingsManager.getProfileRemarks(
             excludeConfigTypes = setOf(
@@ -82,6 +87,7 @@ class SubEditActivity : BaseComponentActivity() {
     }
 
     private fun saveServer(subItem: SubscriptionItem): Boolean {
+        if (FreeSubscription.isFree(editSubId)) return false
         if (TextUtils.isEmpty(subItem.remarks)) {
             return false
         }
@@ -112,6 +118,7 @@ class SubEditActivity : BaseComponentActivity() {
     }
 
     private fun deleteServer(): Boolean {
+        if (FreeSubscription.isFree(editSubId)) return false
         if (editSubId.isNotEmpty()) {
             lifecycleScope.launch(Dispatchers.IO) {
                 SettingsManager.removeSubscriptionWithDefault(editSubId)

@@ -54,12 +54,8 @@ fun MainTopBar(
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val maxMenuHeight = LocalConfiguration.current.screenHeightDp.dp - statusBarHeight - navBarHeight - 20.dp
-    val shortcuts = listOf(
-        Triple(R.drawable.ic_cart_24dp, R.string.title_site_buy, "${AppConfig.SITE_URL}/plans"),
-        Triple(R.drawable.ic_channel_24dp, R.string.title_site_channel, "${AppConfig.SITE_URL}/channel/"),
-        Triple(R.drawable.ic_video_24dp, R.string.title_site_video, "${AppConfig.SITE_URL}/video"),
-        Triple(R.drawable.ic_ticket_24dp, R.string.title_site_ticket, "${AppConfig.SITE_URL}/tickets")
-    )
+    val channelTitle = stringResource(R.string.title_site_channel)
+    val buyTitle = stringResource(R.string.title_site_buy)
 
     AppTopBar(
         title = "",
@@ -83,13 +79,24 @@ fun MainTopBar(
         },
         actions = {
             if (!showSearch) {
-                BarIcon(R.drawable.ic_search_24dp, stringResource(R.string.acc_search)) {
-                    onSearchToggle(true)
-                }
-                shortcuts.forEach { (iconRes, labelRes, url) ->
-                    val title = stringResource(labelRes)
-                    BarIcon(iconRes, title) {
-                        onAction(MainAction.OpenSite(url, title))
+                // Order: more, add, channel, buy, search, gauge (real-delay test for current group).
+                Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
+                    BarIcon(R.drawable.ic_more_vert_24dp, stringResource(R.string.acc_more)) {
+                        showMenu = true
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        scrollState = moreMenuScrollState,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier
+                            .heightIn(max = maxMenuHeight)
+                            .verticalScrollbar(moreMenuScrollState)
+                    ) {
+                        MoreMenuContent { action ->
+                            showMenu = false
+                            onMoreMenuAction(action)
+                        }
                     }
                 }
                 Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
@@ -113,24 +120,20 @@ fun MainTopBar(
                         )
                     }
                 }
-                Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-                    BarIcon(R.drawable.ic_more_vert_24dp, stringResource(R.string.acc_more)) {
-                        showMenu = true
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        scrollState = moreMenuScrollState,
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        modifier = Modifier
-                            .heightIn(max = maxMenuHeight)
-                            .verticalScrollbar(moreMenuScrollState)
-                    ) {
-                        MoreMenuContent { action ->
-                            showMenu = false
-                            onMoreMenuAction(action)
-                        }
-                    }
+                BarIcon(R.drawable.ic_channel_24dp, channelTitle) {
+                    onAction(MainAction.OpenSite("${AppConfig.SITE_URL}/channel/", channelTitle))
+                }
+                BarIcon(R.drawable.ic_cart_24dp, buyTitle) {
+                    onAction(MainAction.OpenSite("${AppConfig.SITE_URL}/plans", buyTitle))
+                }
+                BarIcon(R.drawable.ic_search_24dp, stringResource(R.string.acc_search)) {
+                    onSearchToggle(true)
+                }
+                BarIcon(
+                    R.drawable.ic_gauge_24dp,
+                    stringResource(R.string.title_real_ping_all_server)
+                ) {
+                    onAction(MainAction.TestRealAllServers)
                 }
             }
         }

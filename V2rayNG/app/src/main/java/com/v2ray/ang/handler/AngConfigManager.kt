@@ -501,8 +501,9 @@ object AngConfigManager {
                 )
             }
 
-            var configText = try {
-                val httpPort = SettingsManager.getHttpPort()
+            val httpPort = SettingsManager.getHttpPort()
+            // null means the request failed. An empty string is a successful empty body.
+            val proxied = try {
                 HttpUtil.getUrlContentWithUserAgent(
                     UrlContentRequest(
                         url = url,
@@ -517,10 +518,13 @@ object AngConfigManager {
                 )
             } catch (e: Exception) {
                 LogUtil.e(AppConfig.ANG_PACKAGE, "Update subscription: proxy not ready or other error", e)
-                ""
+                null
             }
-            if (configText.isEmpty()) {
-                configText = try {
+            val needsDirect = proxied == null ||
+                proxied.isEmpty() ||
+                (FreeSubscription.isFree(it.guid) && FreeSubscription.isExplicitlyEmptyFeed(proxied))
+            val configText = if (needsDirect) {
+                try {
                     HttpUtil.getUrlContentWithUserAgent(
                         UrlContentRequest(
                             url = url,
@@ -531,8 +535,22 @@ object AngConfigManager {
                     )
                 } catch (e: Exception) {
                     LogUtil.e(AppConfig.TAG, "Update subscription: Failed to get URL content with user agent", e)
-                    ""
+                    proxied
                 }
+            } else {
+                proxied
+            }
+            if (configText == null) {
+                return SubscriptionUpdateResult(failureCount = 1)
+            }
+            if (FreeSubscription.isFree(it.guid) && FreeSubscription.isExplicitlyEmptyFeed(configText)) {
+                val removed = MmkvManager.decodeServerList(it.guid).toList()
+                if (removed.isNotEmpty()) MmkvManager.removeServers(removed, it.guid)
+                it.subscription.lastUpdated = System.currentTimeMillis()
+                it.subscription.usageInfo = usageInfo
+                MmkvManager.encodeSubscription(it.guid, it.subscription)
+                LogUtil.i(AppConfig.TAG, "Free subscription cleared: ${it.subscription.remarks}")
+                return SubscriptionUpdateResult(successCount = 1)
             }
             if (configText.isEmpty()) {
                 return SubscriptionUpdateResult(failureCount = 1)

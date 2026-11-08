@@ -91,15 +91,22 @@ class CheckUpdateActivity : BaseComponentActivity() {
             downloaded.onSuccess { apk ->
                 updateUi = updateUi?.copy(finished = true, received = apk.length())
                 pendingUpdateApk = apk
-                if (!ApkUpdateInstaller.canInstallPackages(this@CheckUpdateActivity)) {
-                    unknownSourcesLauncher.launch(
-                        Intent(
-                            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                            Uri.parse("package:$packageName")
+                runCatching {
+                    if (!ApkUpdateInstaller.canInstallPackages(this@CheckUpdateActivity)) {
+                        unknownSourcesLauncher.launch(
+                            Intent(
+                                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                Uri.parse("package:$packageName")
+                            )
                         )
+                    } else {
+                        ApkUpdateInstaller.install(this@CheckUpdateActivity, apk)
+                    }
+                }.onFailure { installError ->
+                    updateUi = updateUi?.copy(
+                        finished = false,
+                        error = installError.message
                     )
-                } else {
-                    ApkUpdateInstaller.install(this@CheckUpdateActivity, apk)
                 }
             }.onFailure { error ->
                 if (error is CancellationException) return@onFailure

@@ -156,6 +156,7 @@ fun SubSettingScreen(
                 items = subscriptions,
                 key = { _, item -> item.guid }
             ) { _, subCache ->
+                val locked = subCache.guid == AppConfig.FREE_SUBSCRIPTION_ID
                 ReorderableItem(reorderableState, key = subCache.guid) { isDragging ->
                     ReorderableListItem(
                         scope = this,
@@ -174,7 +175,16 @@ fun SubSettingScreen(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                if (subCache.subscription.url.isNotEmpty()) {
+                                if (locked) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = stringResource(R.string.free_group_summary),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                } else if (subCache.subscription.url.isNotEmpty()) {
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = subCache.subscription.url,
@@ -196,47 +206,49 @@ fun SubSettingScreen(
                                 horizontalAlignment = Alignment.End,
                                 modifier = Modifier.padding(start = 8.dp)
                             ) {
-                                Row {
-                                    if (subCache.subscription.url.isNotEmpty()) {
+                                if (!locked) {
+                                    Row {
+                                        if (subCache.subscription.url.isNotEmpty()) {
+                                            IconButton(onClick = {
+                                                shareTarget = Pair(subCache.guid, subCache.subscription.url)
+                                            }) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.ic_share_24dp),
+                                                    contentDescription = stringResource(R.string.acc_share_subscription)
+                                                )
+                                            }
+                                        }
+                                        IconButton(onClick = { onEditSub(subCache.guid) }) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_edit_24dp),
+                                                contentDescription = stringResource(R.string.acc_edit)
+                                            )
+                                        }
                                         IconButton(onClick = {
-                                            shareTarget = Pair(subCache.guid, subCache.subscription.url)
+                                            if (confirmRemove) removeTarget = SubscriptionDeleteTarget(subCache.guid, subCache.subscription.remarks)
+                                            else onRemoveSub(subCache.guid)
                                         }) {
                                             Icon(
-                                                painter = painterResource(R.drawable.ic_share_24dp),
-                                                contentDescription = stringResource(R.string.acc_share_subscription)
+                                                painter = painterResource(R.drawable.ic_delete_24dp),
+                                                contentDescription = stringResource(R.string.acc_delete)
                                             )
                                         }
                                     }
-                                    IconButton(onClick = { onEditSub(subCache.guid) }) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_edit_24dp),
-                                            contentDescription = stringResource(R.string.acc_edit)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Switch(
+                                        checked = subCache.subscription.enabled,
+                                        onCheckedChange = { checked ->
+                                            val updated = subCache.subscription.copy()
+                                            updated.enabled = checked
+                                            viewModel.update(subCache.guid, updated)
+                                        },
+                                        modifier = Modifier.scale(0.7f),
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
+                                            checkedTrackColor = MaterialTheme.colorScheme.secondary
                                         )
-                                    }
-                                    IconButton(onClick = {
-                                        if (confirmRemove) removeTarget = SubscriptionDeleteTarget(subCache.guid, subCache.subscription.remarks)
-                                        else onRemoveSub(subCache.guid)
-                                    }) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_delete_24dp),
-                                            contentDescription = stringResource(R.string.acc_delete)
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Switch(
-                                    checked = subCache.subscription.enabled,
-                                    onCheckedChange = { checked ->
-                                        val updated = subCache.subscription.copy()
-                                        updated.enabled = checked
-                                        viewModel.update(subCache.guid, updated)
-                                    },
-                                    modifier = Modifier.scale(0.7f),
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                                        checkedTrackColor = MaterialTheme.colorScheme.secondary
                                     )
-                                )
+                                }
                             }
                         }
                     }

@@ -132,6 +132,7 @@ class MainRepository(
         localizedContext.getString(resId, *formatArgs)
 
     override fun getSubscriptions(): List<SubscriptionCache> {
+        SettingsManager.ensureFreeSubscription()
         val result = mutableListOf<SubscriptionCache>()
         if (isGroupAllDisplayEnabled()) {
             result += SubscriptionCache(
