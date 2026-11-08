@@ -41,14 +41,37 @@ jobs:
         run: cp -a libs V2rayNG/app/
 
       - name: Download libv2ray
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           git -C AndroidLibXrayLite fetch --tags --force
           TAG="$(git -C AndroidLibXrayLite describe --tags --abbrev=0 || echo v26.10.31)"
           echo "libv2ray tag: $TAG"
           mkdir -p V2rayNG/app/libs
-          curl -fL --retry 3 -o V2rayNG/app/libs/libv2ray.aar \
-            "https://github.com/2dust/AndroidLibXrayLite/releases/download/${TAG}/libv2ray.aar"
-
+          OUT="V2rayNG/app/libs/libv2ray.aar"
+          download() {
+            local tag="$1"
+            rm -f "$OUT"
+            if gh release download "$tag" -R 2dust/AndroidLibXrayLite -p 'libv2ray.aar' -D V2rayNG/app/libs; then
+              return 0
+            fi
+            ASSET_ID="$(gh api "repos/2dust/AndroidLibXrayLite/releases/tags/${tag}"               --jq '.assets[] | select(.name=="libv2ray.aar") | .id')"
+            if [ -n "${ASSET_ID}" ]; then
+              gh api -H "Accept: application/octet-stream"                 "/repos/2dust/AndroidLibXrayLite/releases/assets/${ASSET_ID}" > "$OUT"
+              return 0
+            fi
+            curl -fL --retry 10 --retry-all-errors --retry-delay 8               --connect-timeout 30 --max-time 300               -o "$OUT"               "https://github.com/2dust/AndroidLibXrayLite/releases/download/${tag}/libv2ray.aar"
+          }
+          if ! download "$TAG"; then
+            echo "Primary tag failed; trying previous release tags"
+            for tag in $(gh api repos/2dust/AndroidLibXrayLite/releases --jq '.[].tag_name' | head -5); do
+              echo "Trying $tag"
+              download "$tag" && TAG="$tag" && break
+            done
+          fi
+          test -s "$OUT"
+          echo "Downloaded $(wc -c < "$OUT") bytes for $TAG"
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
